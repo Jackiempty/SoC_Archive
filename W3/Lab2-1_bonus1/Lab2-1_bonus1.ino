@@ -1,0 +1,162 @@
+#include <Keypad.h>   //引用Keypad函式庫
+#include <Password.h> //引用Password函式庫
+#define KEY_ROWS 4    //按鍵模組的列數
+#define KEY_COLS 4    //按鍵模組的行數
+
+//Keypad設定
+const byte colPins[4] = {2, 3, 4, 5};
+const byte rowPins[4] = {A0, A1, A2, A3};
+const char keymap[KEY_ROWS][KEY_COLS] = { {'1','2','3','A'}, 
+                                          {'4','5','6','B'}, 
+                                          {'7','8','9','C'},
+                                          {'*','0','#','D'} };
+Keypad myKeypad = Keypad(makeKeymap(keymap),rowPins,colPins,KEY_ROWS,KEY_COLS);
+
+//全域變數設定
+Password password = Password("20230920");
+char buffer[8];
+char pass[8];
+int pos = 0;
+bool change_pass = false;
+bool veri = false;
+char ver_code[3];
+char ver_ent[3];
+
+
+    /* Do something */
+
+void setup()
+{  
+  Serial.begin(9600);
+  // set(password);
+  randomSeed(analogRead(0));
+}
+
+void loop()
+{
+//輸入答案
+  char customKey = myKeypad.getKey();
+  if(change_pass == false)
+  {
+    if (customKey != NO_KEY && customKey!='#' && customKey != '*' && customKey != 'A')
+    {
+      if (pos == 8) {
+        Serial.println("buffer full");
+      }
+      else {
+        buffer[pos] = customKey;
+        delay(100);
+        pos++;
+      }
+      Serial.println(customKey);
+    }
+    
+    //判斷答案正確性
+    if(customKey == '#')
+    {
+      Serial.println(buffer);
+      Serial.println("Please enter verification code ");
+      for(int i = 0;i < 3; i++)
+      {
+        ver_code[i] = random(9);
+        Serial.println(ver_code[i]);
+      }
+      Serial.println(ver_code);
+      
+      if(veri == true)
+      {
+        True_OR_False(8);
+      }
+    }
+  }
+  
+  if (customKey != NO_KEY && veri== true)
+    {
+      if (pos == 3) {
+        Serial.println("buffer full");
+      }
+      else {
+        ver_ent[pos] = customKey;
+        delay(100);
+        pos++;
+      }
+      Serial.println(customKey);
+    }
+  if (customKey){
+    if(customKey == '*')
+    {
+      if (change_pass == false)
+      {
+        change_pass = true;
+        clearBuffer();
+      }
+      else //set password
+      {
+        Serial.println(buffer);
+        for(int i = 0; i < 8; i++)
+        {
+          pass[i] = buffer[i];
+        }
+        
+        password.set(pass);
+        change_pass = false;
+        clearBuffer();
+        Serial.println("Password changed");
+      }
+    }
+  }
+
+  if(change_pass == true)
+  {
+    if (customKey == '*')
+    {
+      Serial.println("Change password");
+    }
+    
+    if (customKey != NO_KEY && customKey!='#' && customKey != '*')
+    {
+      if (pos == 8) {
+        Serial.println("buffer full");
+      }
+      else {
+        buffer[pos] = customKey;
+        delay(100);
+        pos++;
+      }
+      Serial.println(customKey);
+    }
+  }
+
+  if (customKey == 'A')
+  {
+    Serial.println("the password is:");
+    Serial.println(password.target);
+    //Serial.println(change_pass);
+  }
+}
+
+void True_OR_False(int buffer_index)
+{
+  for(int i=0; i<buffer_index; i++) password.append(buffer[i]);
+  
+  if( password.evaluate()==1 )
+  {
+    Serial.println("Correct");
+    /* Do something */
+  }
+  else if( password.evaluate()==0 )
+  {
+    Serial.println("Incorrect!");
+    /* Do something */
+  }
+  /* Do something */
+  password.reset();
+  clearBuffer();
+}
+
+void clearBuffer() {
+  for (int i = 0; i < 8; i++) {
+    buffer[i] = '\0'; // Set all elements to null character
+  }
+  pos = 0; // Reset position to 0
+}
